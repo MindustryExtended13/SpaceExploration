@@ -1,11 +1,11 @@
 {
-  "displayName": "Java Mod Template",
-  "name": "example-java-mod",
-  "author": "You",
-  "main": "example.ExampleJavaMod",
-  "description": "A Mindustry Java mod template.",
+  "displayName": "Space Exploration",
+  "name": "se",
+  "author": "MindustryExtended13",
+  "main": "se.SpaceExplorationMod",
+  "description": "A Mindustry java mod that add space exploration!",
   "version": 1.0,
   "minGameVersion": 140,
   "java": true,
-  "repo": "User/RepoName"
+  "repo": "MindustryExtended13/SpaceExploration"
 }

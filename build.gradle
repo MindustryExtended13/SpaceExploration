@@ -1,11 +1,18 @@
 apply plugin: "java"
 
-targetCompatibility = 8
+targetCompatibility = 16
 sourceCompatibility = JavaVersion.VERSION_16
 
-sourceSets.main {
-    java.srcDirs = ["src"]
-    resources.srcDirs = ["assets"]
+sourceSets {
+    main {
+        java.srcDirs = ["src"]
+        resources.srcDirs = ["locales"]
+    }
+
+    test {
+        java.srcDirs = []
+        resources.srcDirs = []
+    }
 }
 
 ext {
@@ -16,91 +23,27 @@ ext {
 
     modCore = {String name ->
         if(name.startsWith(":")) {
-            name = name.substring(1);
+            name = name.substring(1)
         }
 
         return "com.github.MindustryExtended13.Me13Core:$name:533faaf615"
     }
+
+    prjRoot = project.projectDir.toString()
 }
 
-//java 8 backwards compatibility flag
-allprojects {
-    group = "io.user.modname"
-    version '1.0'
+group = "io.me13.se"
+version '1.0'
 
-    tasks.withType(JavaCompile){
-        options.compilerArgs.addAll(['--release', '8'])
-    }
-}
+repositories {
+    mavenCentral()
 
-subprojects {
-    apply plugin: 'java'
-    apply plugin: 'maven-publish'
-
-    sourceSets.main {
-        java.srcDirs = ["src"]
-        resources.srcDirs = []
+    maven {
+        url 'https://maven.xpdustry.com/anuken'
     }
 
-    sourceCompatibility = 1.8 // java 8
-    targetCompatibility = 1.8
-
-    //jitpack modules publish (for example core, integration)
-    //you can remove this if need to remove
-    java {
-        withSourcesJar()
-        withJavadocJar()
-    }
-
-    publishing {
-        publications {
-            maven(MavenPublication) {
-                groupId project.group
-                artifactId project.name
-                version project.version
-                from components.java
-            }
-        }
-    }
-}
-
-allprojects {
-    apply plugin: "java"
-
-    sourceSets.test {
-        java.srcDirs = []
-        resources.srcDirs = []
-    }
-
-    repositories {
-        mavenCentral()
-
-        maven {
-            url 'https://maven.xpdustry.com/anuken'
-        }
-
-        maven {
-            url 'https://www.jitpack.io'
-        }
-    }
-
-    dependencies {
-        compileOnly 'org.jetbrains:annotations:23.0.0'
-    }
-
-    tasks.withType(JavaCompile).tap {
-        configureEach {
-            options.compilerArgs.addAll(['--release', '8'])
-        }
-    }
-
-    //force arc version
-    configurations.configureEach {
-        resolutionStrategy.eachDependency { details ->
-            if(details.requested.group == 'com.github.Anuken.Arc') {
-                details.useVersion "$mindustryVersion"
-            }
-        }
+    maven {
+        url 'https://www.jitpack.io'
     }
 }
 
@@ -111,16 +54,19 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:23.0.0'
     annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
 
-    //core & integration (not optimal and core, integration module can be removed)
-    implementation project(":core")
-    implementation project(":integration")
-
     //ME13 components
-    //to implement use "implementation modCore(':module')"
+    implementation modCore(':units')
+    implementation modCore(":logger")
+}
+
+tasks.withType(JavaCompile).tap {
+    configureEach {
+        options.compilerArgs.addAll(['--release', '16'])
+    }
 }
 
 //force arc version
-configurations.all {
+configurations.configureEach {
     resolutionStrategy.eachDependency { details ->
         if(details.requested.group == 'com.github.Anuken.Arc'){
             details.useVersion "$mindustryVersion"
@@ -128,65 +74,18 @@ configurations.all {
     }
 }
 
-task jarAndroid{
-    dependsOn "jar"
+jar {
+    var prop = gradle.startParameter.projectProperties
+    String asString = null
 
-    doLast{
-        if(!sdkRoot || !new File(sdkRoot).exists()) throw new GradleException(
-                "No valid Android SDK found. Ensure that ANDROID_HOME is set to your Android SDK directory."
-        );
-
-        def platformRoot = new File("$sdkRoot/platforms/").listFiles().sort().reverse().find{
-            f -> new File(f, "android.jar").exists()
-        }
-
-        if(!platformRoot) throw new GradleException(
-                "No android.jar found. Ensure that you have an Android platform installed."
-        )
-
-
-        //collect dependencies needed for desugaring
-        def dependencies = (configurations.compileClasspath.asList() +
-                configurations.runtimeClasspath.asList() + [new File(platformRoot, "android.jar")]).collect{
-            "--classpath $it.path"}.join(" ")
-
-        //dex and desugar files - this requires d8 in your PATH
-        "$sdkRoot/build-tools/30.0.3/d8.bat $dependencies --min-api 14 --output ${project.archivesBaseName}Android.jar ${project.archivesBaseName}Desktop.jar"
-            .execute(null, new File("$buildDir/libs")).waitForProcessOutput(System.out, System.err)
-    }
-}
-
-jar{
-    archiveFileName = "${project.archivesBaseName}Desktop.jar"
-
-    from{
-        configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it) }
+    if(prop.containsKey('ex')) {
+        asString = "${archivesBaseName}Desktop.${prop.get('ex')}"
+    } else {
+        println('Using default file exception (jar)')
+        asString = "${archivesBaseName}Desktop.jar"
     }
 
-    from(rootDir) {
-        include "mod.json"
-        include "icon.png"
-    }
-}
-
-task deploy(type: Jar){
-    dependsOn jarAndroid
-    dependsOn jar
-    archiveFileName = "${project.archivesBaseName}.jar"
-
-    from{ [zipTree("$buildDir/libs/${project.archivesBaseName}Desktop.jar"), zipTree("$buildDir/libs/${project.archivesBaseName}Android.jar")] }
-
-    doLast{
-        delete{
-            delete "$buildDir/libs/${project.archivesBaseName}Desktop.jar"
-            delete "$buildDir/libs/${project.archivesBaseName}Android.jar"
-        }
-    }
-}
-
-task zipJar(type: Jar) {
-    archiveFileName = "${project.archivesBaseName}Desktop.zip"
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = asString
 
     from {
         configurations.runtimeClasspath.collect {
@@ -194,34 +93,34 @@ task zipJar(type: Jar) {
         }
     }
 
-    from("$buildDir/classes/java/main") {
-        include "**"
-    }
-
-    from("$buildDir/resources/main") {
-        include "**"
-    }
-
     from(rootDir) {
         include "mod.json"
         include "icon.png"
     }
 
-    dependsOn 'jar'
-}
+    println("$prjRoot")
 
-project(":core") {
-    dependencies {
-        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
-        compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
-        compileOnly "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
+    doLast {
+        if(prop.containsKey('path')) {
+            copy {
+                println("Copy file ${asString} to destonation")
+                from layout.buildDirectory.file("libs/$asString")
+                into layout.buildDirectory.dir(prop.get('path'))
+            }
+        }
+
+        if(prop.containsKey('m')) {
+            exec {
+                commandLine 'cmd', '/c', "\"${prop.get('m')}\""
+            }
+        }
     }
 }
 
-//project(":integration") {
-//    dependencies {
-//        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
-//        compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
-//        compileOnly "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
-//    }
-//}
+tasks.register('copyGraphicsResources', Copy) {
+    from "$prjRoot\\graphics"
+    include "**"
+    into "$buildDir/resources/main/sprites"
+}
+
+processResources.dependsOn copyGraphicsResources
