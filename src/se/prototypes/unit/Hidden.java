@@ -1,14 +1,14 @@
 package se.prototypes.unit;
 
-import me13.core.units.XeonUnitType;
-
 import mindustry.type.UnitType;
+
+import se.prototypes.unit.shadowiInstances.NoShadowUnitType;
 
 public class Hidden {
     public static UnitType data;
 
     public static void load() {
-        data = new XeonUnitType("data") {{
+        data = new NoShadowUnitType("data") {{
             constructor = DataUnitEntity::new;
             health = Float.POSITIVE_INFINITY;
             hidden = true;

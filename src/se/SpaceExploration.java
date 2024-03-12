@@ -62,7 +62,7 @@ public class SpaceExploration {
         return Core.atlas.find(MOD_ID + "-" + prefix);
     }
 
-    public static Inventory createDefault() {
+    public static @NotNull Inventory createDefault() {
         var inv = new Inventory();
         inv.expand(35);
         return inv;
@@ -85,6 +85,7 @@ public class SpaceExploration {
     }
 
     static DataUnitEntity x;
+    @Contract(pure = true)
     public static DataUnitEntity getEntity() {
         return x;
     }

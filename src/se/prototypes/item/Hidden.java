@@ -11,9 +11,10 @@ import se.SpaceExploration;
 
 public class Hidden {
     public static TextureRegion mapping;
-    public static Item plus, minus;
+    public static Item plus, minus, err;
 
     public static void load() {
+        err = new Item("err", Color.white);
         plus = new Item("plus", Color.white);
         minus = new Item("minus", Color.white);
 
@@ -22,6 +23,7 @@ public class Hidden {
 
             setup(plus, 0, 0);
             setup(minus, 1, 0);
+            setup(err, 2, 0);
         });
     }
 

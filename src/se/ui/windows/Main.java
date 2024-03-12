@@ -16,6 +16,7 @@ import arc.scene.ui.layout.Table;
 import arc.struct.Seq;
 
 import mindustry.Vars;
+import mindustry.ctype.UnlockableContent;
 import mindustry.game.EventType;
 import mindustry.gen.Call;
 import mindustry.gen.Tex;
@@ -28,6 +29,7 @@ import se.ServerIntegration;
 import se.SpaceExploration;
 import se.event.PlayerPacketCallbackResult;
 import se.graphics.TextDraw2;
+import se.prototypes.item.Hidden;
 import se.prototypes.slot.Inventory;
 import se.prototypes.slot.Slot;
 import se.prototypes.slot.SlotItem;
@@ -44,8 +46,17 @@ public class Main extends Window implements ApplicationListener {
         window.rebuild();
     };
 
+    public static final Seq<CraftingCategory> categories = new Seq<>();
     public static final Seq<Button> buttons = new Seq<>();
     public static final Slot selectedSlot = new Slot();
+
+    public static @NotNull CraftingCategory addCategory(String name, UnlockableContent icon) {
+        CraftingCategory category = new CraftingCategory();
+        category.icon = icon == null ? Hidden.err : icon;
+        category.name = name;
+        categories.add(category);
+        return category;
+    }
 
     public static @NotNull Button addButton(String text, Cons3<Main, Button, Button> cons, Cons<Main> builder) {
         Button button = new Button();
@@ -54,6 +65,9 @@ public class Main extends Window implements ApplicationListener {
         button.builder = builder;
         buttons.add(button);
         return button;
+    }
+
+    public static void buildCrafting(Main main) {
     }
 
     public float scrollX;
@@ -341,5 +355,10 @@ public class Main extends Window implements ApplicationListener {
         public String name;
 
         public void onBuild(Cell<TextButton> cell) {}
+    }
+
+    public static class CraftingCategory {
+        public UnlockableContent icon;
+        public String name;
     }
 }

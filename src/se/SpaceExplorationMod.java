@@ -2,12 +2,20 @@ package se;
 
 import arc.Core;
 import arc.Events;
+import arc.scene.ui.layout.Table;
+import arc.util.Reflect;
 
+import me13.core.units.XeonUnitType;
+
+import mindustry.content.Blocks;
+import mindustry.content.Items;
 import mindustry.game.EventType.*;
 import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 
 import se.prototypes.unit.Types;
+import se.prototypes.unit.UnitsShadows;
+import se.prototypes.unit.shadowiInstances.ShadowXeonUnitType;
 import se.ui.window.WindowStack;
 import se.ui.windows.Main;
 
@@ -27,13 +35,24 @@ public class SpaceExplorationMod extends Mod {
             Main.addButton("Logistics", Main.def, (ignored) -> {});
             Main.addButton("Debugging", Main.def, (ignored) -> {});
 
+            Main.addCategory("Transportation", Blocks.conveyor);
+            Main.addCategory("Machines", Blocks.graphitePress);
+            Main.addCategory("Components", Items.beryllium);
+            Main.addCategory("Military", Blocks.spectre);
+
             Core.app.addListener(mainWindow);
             WindowStack.push(mainWindow);
             mainWindow.open();
 
             Events.run(Trigger.update, () -> {
                 if(state.isCampaign() && net.server()) { //mod don't support server-campaign
-                    throw new IllegalStateException("SE + server + campaign = NO! but SE + server or campaign = OK!");
+                    throw new IllegalStateException("SE + server AND campaign = NO! but SE + server XOR campaign = OK!");
+                }
+
+                var t = ((Table) Reflect.get(ui.hudfrag.blockfrag, "toggler"));
+                if(t != null && t.visible) {
+                    t.visible(() -> false);
+                    t.updateVisibility();
                 }
             });
 
@@ -41,6 +60,13 @@ public class SpaceExplorationMod extends Mod {
                 //Fixes some visual bugs
                 mainWindow.rollUp();
             });
+
+            UnitsShadows.load();
+        });
+
+        Events.run(UnitsShadows.UnitsShadowsPreLoadEvent.class, () -> {
+            UnitsShadows.classMap.put(XeonUnitType.class, (t) -> new ShadowXeonUnitType(t.name));
+            UnitsShadows.vanillaLoader();
         });
 
         LOGGER.log("Loaded mod constructor!");
