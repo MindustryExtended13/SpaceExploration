@@ -8,7 +8,6 @@ import mindustry.core.ContentLoader;
 import mindustry.ctype.Content;
 import mindustry.ctype.MappableContent;
 
-import mindustry.ctype.UnlockableContent;
 import org.jetbrains.annotations.NotNull;
 
 import static mindustry.Vars.*;

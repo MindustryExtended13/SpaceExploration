@@ -6,7 +6,7 @@ sourceCompatibility = JavaVersion.VERSION_16
 sourceSets {
     main {
         java.srcDirs = ["src"]
-        resources.srcDirs = ["locales"]
+        resources.srcDirs = []
     }
 
     test {
@@ -96,6 +96,8 @@ jar {
     from(rootDir) {
         include "mod.json"
         include "icon.png"
+        include "scripts/**"
+        include "locales/**"
     }
 
     println("$prjRoot")

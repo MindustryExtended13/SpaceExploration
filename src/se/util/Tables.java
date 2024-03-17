@@ -1,5 +1,6 @@
 package se.util;
 
+import arc.func.Cons2;
 import arc.func.Func;
 import arc.func.Prov;
 import arc.struct.Seq;
@@ -23,8 +24,12 @@ public class Tables {
         hiddenWork = old;
     }
 
-    public static Class<?> getTableType(Class<?> type) {
-        return type.isAnonymousClass() ? getTableType(type.getSuperclass()) : type;
+    public static Class<?> getTableType(Object obj) {
+        return obj == null ? null : getTableTypeCl(obj.getClass());
+    }
+
+    public static Class<?> getTableTypeCl(Class<?> type) {
+        return type.isAnonymousClass() ? getTableTypeCl(type.getSuperclass()) : type;
     }
 
     @Contract("null -> !null")
@@ -38,6 +43,20 @@ public class Tables {
 
     private static void _tmp_295210(String cl, String name, Throwable err) {
         if(!hiddenWork) SpaceExploration.LOGGERE.log("Error setting field {} of class {} for object:\n{}", name, cl, toString(err));
+    }
+
+    public static void deepEdit(Class<?> initial, Cons2<Field, Class<?>> consumer) {
+        if(initial == null) return;
+        Class<?> cl = initial;
+
+        while(cl != null) {
+            for(Field field : cl.getDeclaredFields()) {
+                field.setAccessible(true);
+                consumer.get(field, cl);
+            }
+
+            cl = cl.getSuperclass();
+        }
     }
 
     @Contract("null, _, _ -> null")
@@ -60,7 +79,7 @@ public class Tables {
 
                 if(!ignoredFields.contains(name, false)) {
                     try {
-                        Reflect.set(cl, instance, name, field.get(object));
+                        Reflect.set(cl, instance, name, Reflect.get(cl, object, name));
                     } catch(Throwable e) {
                         _tmp_295210(cl.getSimpleName(), name, e);
                     }

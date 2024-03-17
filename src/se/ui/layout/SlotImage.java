@@ -30,6 +30,6 @@ public class SlotImage extends Stack {
             t.left().bottom();
             UIUtil.label(t, () -> slot.count >= 1000 ? UI.formatAmount(slot.count) : slot.count + "").style(Styles.outlineLabel).fontScale(0.7f);
             t.pack();
-        }).visible(() -> slot.item != null && slot.count > 1));
+        }).visible(() -> slot.item != null && slot.count != 1));
     }
 }

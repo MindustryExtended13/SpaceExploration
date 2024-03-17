@@ -20,6 +20,7 @@ import mindustry.type.Item;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
+import se.content.SeContentLoader;
 import se.prototypes.slot.Inventory;
 import se.prototypes.unit.DataUnitEntity;
 import se.prototypes.unit.Hidden;
@@ -35,6 +36,7 @@ public class SpaceExploration {
 
     public static Inventory campaignInventory;
     public static Inventory currentInventory;
+    public static SeContentLoader se_content;
     public static Mods.LoadedMod instance;
     public static Main mainWindow;
 
