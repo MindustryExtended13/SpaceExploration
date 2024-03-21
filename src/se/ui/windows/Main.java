@@ -151,26 +151,30 @@ public class Main extends Window implements ApplicationListener {
                                     }).width(400).row();
                                     table.add("").row();
                                 }
-                                table.add("requirements:").row();
-                                table.table(req -> {
-                                    for(var stack : item.in) {
-                                        var s1 = new Slot();
-                                        s1.stack = stack;
-                                        s1.overdrive.stackSize = Float.POSITIVE_INFINITY;
-                                        req.add(new SlotImage(s1, () -> {
-                                            return main.accessor.amountOf(stack.item) >= stack.count ? Color.darkGray : invalid;
-                                        }, true)).pad(3).size(48);
-                                    }
-                                }).row();
-                                table.add("output:").row();
-                                table.table(out -> {
-                                    for(var stack : item.out) {
-                                        var s1 = new Slot();
-                                        s1.stack = stack;
-                                        s1.overdrive.stackSize = Float.POSITIVE_INFINITY;
-                                        out.add(new SlotImage(s1, () -> Color.darkGray, true)).pad(3).size(48);
-                                    }
-                                }).row();
+                                if(!item.in.isEmpty()) {
+                                    table.add("requirements:").row();
+                                    table.table(req -> {
+                                        for(var stack : item.in) {
+                                            var s1 = new Slot();
+                                            s1.stack = stack;
+                                            s1.overdrive.stackSize = Float.POSITIVE_INFINITY;
+                                            req.add(new SlotImage(s1, () -> {
+                                                return main.accessor.amountOf(stack.item) >= stack.count ? Color.darkGray : invalid;
+                                            }, true)).pad(3).size(48);
+                                        }
+                                    }).row();
+                                }
+                                if(!item.out.isEmpty()) {
+                                    table.add("output:").row();
+                                    table.table(out -> {
+                                        for(var stack : item.out) {
+                                            var s1 = new Slot();
+                                            s1.stack = stack;
+                                            s1.overdrive.stackSize = Float.POSITIVE_INFINITY;
+                                            out.add(new SlotImage(s1, () -> Color.darkGray, true)).pad(3).size(48);
+                                        }
+                                    }).row();
+                                }
                                 if(!item.isCanCraftedByHand()) {
                                     table.add("[red]Can't be crafted by hand!");
                                 }
