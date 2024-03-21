@@ -10,6 +10,10 @@ import mindustry.mod.Mods;
 import se.SpaceExploration;
 import se.util.Tables;
 
+import java.lang.reflect.Field;
+
+import static mindustry.Vars.content;
+
 public class VanillaMixin implements SeContentMixin {
     @Override
     public void overrideContentSetter(Content content, Mods.LoadedMod ignored) {
@@ -37,5 +41,30 @@ public class VanillaMixin implements SeContentMixin {
                 SpaceExploration.LOGGERE.log("Error SE5208: {}", Strings.kebabToCamel(m.name));
             }});
         }
+    }
+
+    @Override
+    public Object handleField(Field ignored, Object object, Object host) {
+        if(object instanceof MappableContent m) {
+            return content.getByName(m.getContentType(), m.name);
+        }
+
+        if(object instanceof Content c) {
+            return content.getByID(c.getContentType(), c.id);
+        }
+
+        if(object instanceof MappableContent[] arr) {
+            for(int i = 0; i < arr.length; i++) {
+                arr[i] = content.getByName(arr[i].getContentType(), arr[i].name);
+            }
+        }
+
+        if(object instanceof Content[] arr) {
+            for(int i = 0; i < arr.length; i++) {
+                arr[i] = content.getByID(arr[i].getContentType(), arr[i].id);
+            }
+        }
+
+        return object;
     }
 }

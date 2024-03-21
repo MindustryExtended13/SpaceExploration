@@ -4,6 +4,8 @@ import mindustry.ctype.Content;
 import mindustry.ctype.MappableContent;
 import mindustry.mod.Mods.LoadedMod;
 
+import java.lang.reflect.Field;
+
 public interface SeContentMixin {
     default <T extends MappableContent> T mappableTransformation(T content, LoadedMod ignored) {
         return content;
@@ -18,5 +20,9 @@ public interface SeContentMixin {
     }
 
     default void overrideContentSetter(Content ignored, LoadedMod ignored3) {
+    }
+
+    default Object handleField(Field ignored, Object object, Object ignored2) {
+        return object;
     }
 }

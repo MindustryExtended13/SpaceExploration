@@ -1,61 +1,53 @@
 package se.prototypes.slot;
 
 import arc.struct.ObjectMap;
-
 import arc.util.io.Reads;
 import arc.util.io.Writes;
+
 import mindustry.ctype.UnlockableContent;
-import mindustry.type.Item;
+
 import org.jetbrains.annotations.NotNull;
 
-public class Slot
-{
+import se.prototypes.item.SeItemStack;
+
+public class Slot {
     public static final ObjectMap<UnlockableContent, SlotData> DEFAULTS = new ObjectMap<>();
     public static final Slot tmp1 = new Slot();
     public SlotData overdrive = new SlotData();
-    public SlotItem item;
-    public int count;
+    public SeItemStack stack = SeItemStack.empty();
 
     {
         overdrive.stackSize = -7;
     }
 
-    public void pick(@NotNull Slot slot)
-    {
-        item = slot.item;
-        count = slot.count;
+    public void pick(@NotNull Slot slot) {
+        stack = slot.stack;
         overdrive = slot.overdrive;
 
-        slot.item = null;
-        slot.count = 0;
+        slot.stack = SeItemStack.empty();
     }
 
-    public void drop(@NotNull Slot slot)
-    {
-        slot.item = item;
+    public void drop(@NotNull Slot slot) {
+        slot.stack.item = stack.item;
 
-        int left = slot.maxStackSize() - slot.count;
-        slot.count += Math.min(left, count);
-        count -= Math.min(left, count);
+        float left = slot.maxStackSize() - slot.stack.count;
+        slot.stack.count += Math.min(left, stack.count);
+        stack.count -= Math.min(left, stack.count);
 
-        if(count == 0)
-        {
-            item = null;
+        if(stack.count <= 0) {
+            stack.item = null;
         }
     }
 
-    public UnlockableContent getItem()
-    {
-        return item == null ? null : item.get();
+    public UnlockableContent getItem() {
+        return stack.item == null ? null : stack.item.get();
     }
 
-    public SlotData defaults()
-    {
+    public SlotData defaults() {
         var it = getItem();
         var def = DEFAULTS.get(it);
 
-        if(def == null)
-        {
+        if(def == null) {
             var dat = new SlotData();
             DEFAULTS.put(it, dat);
             return dat;
@@ -64,33 +56,28 @@ public class Slot
         return def;
     }
 
-    public int maxStackSize()
-    {
+    public float maxStackSize() {
         return overdrive.validStackSize() ? overdrive.stackSize : defaults().stackSize;
     }
 
-    public void read(Reads reads)
-    {
-        if(reads.bool())
-        {
-            item = new SlotItem((Item) null);
-            item.read(reads);
+    public void read(@NotNull Reads reads) {
+        if(reads.bool()) {
+            stack.item = new SlotItem(null);
+            stack.item.read(reads);
         }
 
         overdrive.read(reads);
-        count = reads.i();
+        stack.count = reads.f();
     }
 
-    public void write(Writes writes)
-    {
-        writes.bool(item != null);
+    public void write(@NotNull Writes writes) {
+        writes.bool(stack.item != null);
 
-        if(item != null)
-        {
-            item.write(writes);
+        if(stack.item != null) {
+            stack.item.write(writes);
         }
 
         overdrive.write(writes);
-        writes.i(count);
+        writes.f(stack.count);
     }
 }

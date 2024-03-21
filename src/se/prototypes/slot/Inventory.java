@@ -17,10 +17,10 @@ public class Inventory {
         return slots.get(index);
     }
 
-    public int amountOf(SlotItem item) {
+    public float amountOf(SlotItem item) {
         return item == null ? 0 : slots
-                .select(s -> item.equals(s.item))
-                .sum(s -> s.count);
+                .select(s -> item.equals(s.stack.item))
+                .sumf(s -> s.stack.count);
     }
 
     //a.k.a. avaliable
@@ -29,17 +29,17 @@ public class Inventory {
             return null;
         }
 
-        var need = slots.find(s -> item.equals(s.item) && (findFull || s.count < s.maxStackSize()));
+        var need = slots.find(s -> item.equals(s.stack.item) && (findFull || s.stack.count < s.maxStackSize()));
 
         if(need == null) {
-            var slot = slots.find(s -> s.item == null);
+            var slot = slots.find(s -> s.stack.item == null);
 
             if(slot == null) {
                 return null;
             }
 
-            slot.item = item;
-            slot.count = 0;
+            slot.stack.item = item;
+            slot.stack.count = 0;
             return slot;
         }
 
@@ -68,7 +68,7 @@ public class Inventory {
         }
     }
 
-    public StackChangeResult removeItem(SlotItem item, int count) {
+    public StackChangeResult removeItem(SlotItem item, float count) {
         var result = new StackChangeResult();
         result.queue = new Seq<>();
         result.item = item;
@@ -81,7 +81,7 @@ public class Inventory {
         return result;
     }
 
-    public StackChangeResult pushItem(SlotItem item, int count) {
+    public StackChangeResult pushItem(SlotItem item, float count) {
         var result = new StackChangeResult();
         result.queue = new Seq<>();
         result.item = item;
@@ -94,7 +94,7 @@ public class Inventory {
         return result;
     }
 
-    private void _func481031(@NotNull StackChangeResult result, int x) {
+    private void _func481031(@NotNull StackChangeResult result, float x) {
         var avaliable = findAvailableFor(result.item, true);
 
         if(avaliable == null) {
@@ -106,18 +106,18 @@ public class Inventory {
         }
 
         result.queue.add(avaliable);
-        int stack = avaliable.count - x;
+        float stack = avaliable.stack.count - x;
 
         if(stack < 0) {
-            avaliable.item = null;
-            _func481031(result, x - avaliable.count);
+            avaliable.stack.item = null;
+            _func481031(result, x - avaliable.stack.count);
         } else {
-            avaliable.count -= x;
+            avaliable.stack.count -= x;
             result.left = 0;
         }
     }
 
-    private void _func139531(@NotNull StackChangeResult result, int x) {
+    private void _func139531(@NotNull StackChangeResult result, float x) {
         var available = findAvailableFor(result.item, false);
 
         if(available == null) {
@@ -128,14 +128,14 @@ public class Inventory {
             return;
         }
 
-        int maxStack = available.maxStackSize();
-        int stack = available.count + x;
+        float maxStack = available.maxStackSize();
+        float stack = available.stack.count + x;
 
         if(stack > maxStack) {
-            available.count = maxStack;
+            available.stack.count = maxStack;
             _func139531(result, stack - maxStack);
         } else {
-            available.count += x;
+            available.stack.count += x;
             result.left = 0;
         }
 
@@ -158,7 +158,7 @@ public class Inventory {
     public static class StackChangeResult {
         public Seq<Slot> queue;
         public SlotItem item;
-        public int count;
-        public int left;
+        public float count;
+        public float left;
     }
 }

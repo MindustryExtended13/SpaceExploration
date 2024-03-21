@@ -49,6 +49,7 @@ public @se.Mod class SpaceExplorationMod extends Mod {
             content = se_content;
             LOGGER.log("Re-Fixing content");
             se_content.each(se_content::fixFields);
+            se_content.logContent();
 
             mainWindow = new Main();
 

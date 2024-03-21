@@ -14,22 +14,27 @@ import se.ui.UIUtil;
 
 public class SlotImage extends Stack {
     public SlotImage(Slot slot, Color color) {
+        this(slot, color, false);
+    }
+
+    public SlotImage(Slot slot, Color color, boolean alwaysShowNumber) {
         add(new Table(o -> {
             o.image().color(color).grow();
         }));
 
         add(new Table(o -> {
             o.add(new Image()).size(32f).scaling(Scaling.fit).update(img -> {
-                if(slot.item != null) {
-                    img.setDrawable(slot.item.get().uiIcon);
+                if(slot.stack.item != null) {
+                    img.setDrawable(slot.stack.item.get().uiIcon);
                 }
             });
-        }).visible(() -> slot.item != null));
+        }).visible(() -> slot.stack.item != null));
 
         add(new Table(t -> {
             t.left().bottom();
-            UIUtil.label(t, () -> slot.count >= 1000 ? UI.formatAmount(slot.count) : slot.count + "").style(Styles.outlineLabel).fontScale(0.7f);
+            UIUtil.label(t, () -> slot.stack.count >= 1000 ? UI.formatAmount(slot.stack.intCount()) : slot.stack.intCount() + "")
+                    .style(Styles.outlineLabel).fontScale(0.7f);
             t.pack();
-        }).visible(() -> slot.item != null && slot.count != 1));
+        }).visible(() -> slot.stack.item != null && (alwaysShowNumber || slot.stack.intCount() != 1)));
     }
 }

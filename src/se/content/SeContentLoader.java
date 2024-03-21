@@ -7,14 +7,16 @@ import arc.util.Reflect;
 import mindustry.Vars;
 import mindustry.core.ContentLoader;
 import mindustry.ctype.Content;
+import mindustry.ctype.ContentType;
 import mindustry.ctype.MappableContent;
 import mindustry.mod.Mods.LoadedMod;
 
-import se.SpaceExploration;
 import se.prototypes.Manager;
 import se.util.Tables;
 
 import java.lang.reflect.Modifier;
+
+import static se.SpaceExploration.*;
 
 public class SeContentLoader extends HiddenWorkContentLoader {
     public final Seq<SeContentMixin> mixins = new Seq<>();
@@ -32,24 +34,20 @@ public class SeContentLoader extends HiddenWorkContentLoader {
         return tmp;
     }
 
-    public void fixFields(Content content) {
+    public void fixFields(Object content) {
         if(content == null) return;
-        Tables.deepEdit(content.getClass(), (field, ignored) -> {try {
+        Tables.hiddenWork(() -> Tables.deepEdit(content.getClass(), (field, ignored) -> {try {
             int modifiers = field.getModifiers();
             if(!Modifier.isFinal(modifiers)) {
                 Object x = Modifier.isStatic(modifiers) ? null : content;
-
                 var value = field.get(x);
-                if(value instanceof MappableContent cnt) {
-                    //I don't why need this for mappable but anyway
-                    field.set(x, getByName(cnt.getContentType(), cnt.name));
-                } if(value instanceof Content cnt) {
-                    field.set(x, getByID(cnt.getContentType(), cnt.id));
-                }
+
+                Object $ = mixins.reduce(value, (mixin, c) -> mixin.handleField(field, c, content));
+                if($ != value) field.set(x, $);
             }
         } catch(Throwable e) {
-            SpaceExploration.LOGGERE.log("Error SE5201: {}", Tables.toString(e));
-        }});
+            LOGGERE.log("Error SE5201: {}", Tables.toString(e));
+        }}));
     }
 
     public void loadFrom() {
@@ -92,6 +90,38 @@ public class SeContentLoader extends HiddenWorkContentLoader {
 
     public void overrideSetter(Content content) {
         mixins.each(mixin -> mixin.overrideContentSetter(content, getCurrentMod()));
+    }
+
+    @Override
+    public <T extends Content> T getByID(ContentType type, int id) {
+        if(id < 0) LOGGERW.log("Getting by id that smaller than 0");
+        return super.getByID(type, id);
+    }
+
+    @Override
+    public void logContent() {
+        Seq<Content>[] var1 = getContentMap();
+        int var2 = var1.length;
+
+        for(int var3 = 0; var3 < var2; ++var3) {
+            Seq<Content> arr = var1[var3];
+
+            for(int i = 0; i < arr.size; ++i) {
+                int id = arr.get(i).id;
+                if (id != i) {
+                    LOGGERE.log("Error SE5678: {} (expected {} but got {})", arr.get(i), i, id);
+                }
+            }
+        }
+
+        LOGGER.log("--- CONTENT INFO ---");
+
+        for(int k = 0; k < var2; ++k) {
+            LOGGER.log("[{}]: loaded {}", ContentType.all[k].name(), var1[k].size);
+        }
+
+        LOGGER.log("Total content loaded: {}", Seq.with(ContentType.all).mapInt((c) -> var1[c.ordinal()].size).sum());
+        LOGGER.log("--------------------");
     }
 
     @Override

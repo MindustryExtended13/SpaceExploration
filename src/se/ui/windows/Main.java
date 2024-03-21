@@ -37,6 +37,7 @@ import mindustry.world.blocks.power.PowerNode;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.meta.BuildVisibility;
 
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import se.ServerIntegration;
@@ -57,8 +58,6 @@ import static mindustry.Vars.*;
 
 public class Main extends Window implements ApplicationListener {
     public static final Cons3<Main, Button, Button> def = (window, ignored, self) -> {
-        window.btnScrollX = 0;
-        window.btnScrollY = 0;
         window.selected = self;
         window.rebuild();
     };
@@ -73,7 +72,8 @@ public class Main extends Window implements ApplicationListener {
     public static CraftingCategory military;
     public static CraftingCategory landfill;
 
-    public static boolean military(Block content) {
+    @Contract(pure = true)
+    public static boolean military(@NotNull Block content) {
         return content.category == Category.units || content.category == Category.turret || content.category == Category.defense;
     }
 
@@ -137,7 +137,7 @@ public class Main extends Window implements ApplicationListener {
 
     public static void buildCrafting(@NotNull Main main) {
         float fixedWidth = Math.max(main.width / 2, 500);
-        int cells = Mathf.floor((main.width - fixedWidth) / 60) - 1;
+        int cells = Mathf.floor((main.width - fixedWidth) / 60);
 
         if(cells <= 0) {
             cells = 1;
@@ -160,15 +160,17 @@ public class Main extends Window implements ApplicationListener {
             p.setScrollingDisabled(false, true);
             t.row();
             var x = t.pane(cont -> {
+                cont.top().left();
                 for(var row : selectedCategory.content) {
                     cont.table(list -> {
+                        list.left();
                         int j = 0;
                         for(var item : row) {
                             var s = new Slot();
-                            s.count = 1;
-                            s.item = new SlotItem(item);
-                            s.overdrive.stackSize = Integer.MAX_VALUE;
-                            list.add(new SlotImage(s, Color.darkGray)).size(48).pad(6);
+                            s.stack.count = 1;
+                            s.stack.item = new SlotItem(item);
+                            s.overdrive.stackSize = Float.POSITIVE_INFINITY;
+                            list.add(new SlotImage(s, Color.darkGray, true)).size(48).pad(6);
 
                             if(j++ % finalCells == finalCells - 1) {
                                 list.row();
@@ -177,15 +179,15 @@ public class Main extends Window implements ApplicationListener {
                     }).growX().row();
                 }
             }).grow().get();
+            x.setFadeScrollBars(true);
             x.setOverscroll(false, false);
             x.setScrollingDisabled(true, false);
+            x.setupFadeScrollBars(1, 0.25f);
         }).grow();
     }
 
     public float scrollX;
     public float scrollY;
-    public float btnScrollX;
-    public float btnScrollY;
     public Inventory accessor;
     public Table buttonsCont;
     public Button selected;
@@ -194,7 +196,7 @@ public class Main extends Window implements ApplicationListener {
     private int _await_599208;
 
     public static boolean picked(SlotItem item) {
-        return selectedSlot.item != null && (item == null || item.equals(selectedSlot.item));
+        return selectedSlot.stack.item != null && (item == null || item.equals(selectedSlot.stack.item));
     }
 
     public void unfocus() {
@@ -311,7 +313,7 @@ public class Main extends Window implements ApplicationListener {
                     scrollX = tmp[0].getScrollX();
                 });
             });
-        }).growX().left().row();
+        }).growX().left().height(50).row();
 
         contentRoot.table(data -> {
             int count = (int) (fixedWidth / 60);
@@ -326,31 +328,33 @@ public class Main extends Window implements ApplicationListener {
 
                     elem.clicked(KeyCode.mouseRight, () -> {
                         if(!picked(null)) {
-                            if(slot.count == 1) {
+                            if(slot.stack.count <= 1) {
                                 selectedSlot.pick(slot);
                             } else {
                                 selectedSlot.overdrive = slot.overdrive;
-                                selectedSlot.item = slot.item;
+                                selectedSlot.stack.item = slot.stack.item;
 
-                                int x = slot.count % 2;
-                                int c = Mathf.floor(slot.count / 2f);
+                                float x = slot.stack.count % 2f;
+                                float c = Mathf.floor(slot.stack.count / 2f);
 
-                                selectedSlot.count = c;
-                                slot.count = c + x;
+                                selectedSlot.stack.count = c;
+                                slot.stack.count = c + x;
                             }
-                        } else if(picked(slot.item) && (slot.item == null || slot.count < slot.maxStackSize())) {
-                            if(selectedSlot.count == 1) {
-                                selectedSlot.item = null;
-                                selectedSlot.count = 0;
-                            } else {
-                                selectedSlot.count--;
+                        } else if(picked(slot.stack.item) && (slot.stack.item == null || slot.stack.count < slot.maxStackSize())) {
+                            if(selectedSlot.stack.count == 1) {
+                                selectedSlot.stack.item = null;
+                                selectedSlot.stack.count = 0;
+                            } else if(selectedSlot.stack.count > 1) {
+                                selectedSlot.stack.count--;
                             }
 
-                            if(slot.item == null) {
-                                slot.item = selectedSlot.item;
-                                slot.count = 1;
-                            } else {
-                                slot.count++;
+                            if(selectedSlot.stack.count >= 1) {
+                                if(slot.stack.item == null) {
+                                    slot.stack.item = selectedSlot.stack.item;
+                                    slot.stack.count = 1;
+                                } else {
+                                    slot.stack.count++;
+                                }
                             }
                         }
 
@@ -358,20 +362,17 @@ public class Main extends Window implements ApplicationListener {
                     });
 
                     elem.clicked(() -> {
-                        if(picked(slot.item)) {
+                        if(picked(slot.stack.item)) {
                             selectedSlot.drop(slot);
-                        } else if(slot.item != null) {
+                        } else if(slot.stack.item != null) {
                             if(picked(null)) {
-                                Slot.tmp1.item = slot.item;
-                                Slot.tmp1.count = slot.count;
+                                Slot.tmp1.stack = slot.stack;
                                 Slot.tmp1.overdrive = slot.overdrive;
 
-                                slot.item = selectedSlot.item;
-                                slot.count = selectedSlot.count;
+                                slot.stack = selectedSlot.stack;
                                 slot.overdrive = selectedSlot.overdrive;
 
-                                selectedSlot.item = Slot.tmp1.item;
-                                selectedSlot.count = Slot.tmp1.count;
+                                selectedSlot.stack = Slot.tmp1.stack;
                                 selectedSlot.overdrive = Slot.tmp1.overdrive;
                             } else {
                                 selectedSlot.pick(slot);
@@ -392,7 +393,7 @@ public class Main extends Window implements ApplicationListener {
             pane.setFadeScrollBars(true);
             pane.setupFadeScrollBars(1, 0.25f);
 
-            var pane2 = data.pane(cont -> {
+            data.table(cont -> {
                 cont.setBackground(Tex.pane);
                 buttonsCont = cont;
 
@@ -401,23 +402,12 @@ public class Main extends Window implements ApplicationListener {
                 }
             }).grow().get();
 
-            pane2.setOverscroll(false, false);
-
             Core.app.post(() -> {
                 pane.setScrollPercentY(scrollY);
                 pane.updateVisualScroll();
 
                 pane.update(() -> {
                     scrollY = pane.getScrollY();
-                });
-
-                pane2.setScrollX(btnScrollX);
-                pane2.setScrollY(btnScrollY);
-                pane2.updateVisualScroll();
-
-                pane2.update(() -> {
-                    btnScrollX = pane2.getScrollX();
-                    btnScrollY = pane2.getScrollY();
                 });
             });
         }).grow();
@@ -445,13 +435,14 @@ public class Main extends Window implements ApplicationListener {
             Draw.proj(camera);
 
             Draw.draw(Layer.max, () -> {
-                if(selectedSlot != null && selectedSlot.item != null) {
+                if(selectedSlot != null && selectedSlot.stack.item != null) {
                     var pos = camera.unproject(Core.input.mouse());
-                    var icon = selectedSlot.item.get().uiIcon;
+                    var icon = selectedSlot.stack.item.get().uiIcon;
                     Draw.rect(icon, pos.x, pos.y, icon.width, icon.height);
-                    var size = TextDraw2.size(selectedSlot.count, 0);
+                    float val = Mathf.floor(selectedSlot.stack.count);
+                    var size = TextDraw2.size(val, 0);
                     TextDraw2.TEXT_SCALE *= 3;
-                    TextDraw2.text(icon.width / 2f + pos.x + size.x / 2 + 8, pos.y, 0, Color.white, selectedSlot.count);
+                    TextDraw2.text(icon.width / 2f + pos.x + size.x / 2 + 8, pos.y, 0, Color.white, val);
                     TextDraw2.TEXT_SCALE /= 3;
                 }
             });
@@ -465,7 +456,7 @@ public class Main extends Window implements ApplicationListener {
         public Cons<Main> builder;
         public String name;
 
-        public void onBuild(Cell<TextButton> cell) {}
+        public void onBuild(Cell<TextButton> ignored) {}
     }
 
     public static class CraftingCategory {
