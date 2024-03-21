@@ -1,8 +1,8 @@
 package se.ui.windows;
 
 import arc.ApplicationListener;
-import arc.Core;
 import arc.Events;
+import arc.func.Boolp;
 import arc.func.Cons;
 import arc.func.Cons3;
 import arc.graphics.Color;
@@ -16,7 +16,6 @@ import arc.scene.ui.layout.Cell;
 import arc.scene.ui.layout.Table;
 import arc.struct.Seq;
 
-import mindustry.Vars;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.EventType;
 import mindustry.gen.Call;
@@ -25,17 +24,6 @@ import mindustry.graphics.Layer;
 import mindustry.type.Category;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
-import mindustry.world.blocks.distribution.Conveyor;
-import mindustry.world.blocks.distribution.Duct;
-import mindustry.world.blocks.distribution.Router;
-import mindustry.world.blocks.distribution.StackConveyor;
-import mindustry.world.blocks.environment.*;
-import mindustry.world.blocks.liquid.Conduit;
-import mindustry.world.blocks.liquid.LiquidRouter;
-import mindustry.world.blocks.power.Battery;
-import mindustry.world.blocks.power.PowerNode;
-import mindustry.world.blocks.production.GenericCrafter;
-import mindustry.world.meta.BuildVisibility;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -45,6 +33,8 @@ import se.SpaceExploration;
 import se.event.PlayerPacketCallbackResult;
 import se.graphics.TextDraw2;
 import se.prototypes.item.Hidden;
+import se.prototypes.recipe.Recipe;
+import se.prototypes.recipe.RecipeCatalogue;
 import se.prototypes.slot.Inventory;
 import se.prototypes.slot.Slot;
 import se.prototypes.slot.SlotItem;
@@ -52,8 +42,8 @@ import se.ui.layout.SlotImage;
 import se.ui.window.Window;
 import se.ui.window.WindowWarning;
 import se.util.EventState;
-import se.util.Tables;
 
+import static arc.Core.*;
 import static mindustry.Vars.*;
 
 public class Main extends Window implements ApplicationListener {
@@ -75,47 +65,6 @@ public class Main extends Window implements ApplicationListener {
     @Contract(pure = true)
     public static boolean military(@NotNull Block content) {
         return content.category == Category.units || content.category == Category.turret || content.category == Category.defense;
-    }
-
-    public static void load() {
-        transportation.content.add(new Seq<>(), new Seq<>(), new Seq<>(), new Seq<>());
-        transportation.content.add(new Seq<>(), new Seq<>(), new Seq<>(), new Seq<>());
-        transportation.content.add(new Seq<>(), new Seq<>(), new Seq<>(), new Seq<>());
-        landfill.content.add(new Seq<>(), new Seq<>());
-        var content = Vars.content;
-
-        content.blocks().each(b -> {
-            if((b.buildVisibility == BuildVisibility.hidden || b instanceof OreBlock || b instanceof OverlayFloor)
-                    && Tables.getTableType(b) != Floor.class) {
-                return;
-            }
-
-            if(b instanceof Floor) {
-                landfill.content.get(0).add(b);
-            } else if(!military(b)) {
-                if(b.buildVisibility == BuildVisibility.sandboxOnly) {
-                    transportation.content.get(9).add(b);
-                } else if(b.category == Category.production) {
-                    transportation.content.get(0).add(b);
-                } else if(b instanceof Conveyor || b instanceof StackConveyor || b instanceof Duct || b instanceof Router) {
-                    transportation.content.get(1).add(b);
-                } else if(b instanceof Conduit || b instanceof LiquidRouter) {
-                    transportation.content.get(2).add(b);
-                } else if(b.category == Category.distribution) {
-                    transportation.content.get(3).add(b);
-                } else if(b.category == Category.liquid) {
-                    transportation.content.get(4).add(b);
-                } else if(b instanceof PowerNode || b instanceof Battery) {
-                    transportation.content.get(5).add(b);
-                } else if(b instanceof GenericCrafter || b.category == Category.power) {
-                    transportation.content.get(6).add(b);
-                } else if(b.category == Category.logic) {
-                    transportation.content.get(7).add(b);
-                } else {
-                    transportation.content.get(8).add(b);
-                }
-            }
-        });
     }
 
     public static @NotNull CraftingCategory addCategory(String name, UnlockableContent icon) {
@@ -161,16 +110,71 @@ public class Main extends Window implements ApplicationListener {
             t.row();
             var x = t.pane(cont -> {
                 cont.top().left();
-                for(var row : selectedCategory.content) {
+                Seq<Recipe> recipes = RecipeCatalogue.all.values().toSeq().select(r -> r.category == selectedCategory);
+                Seq<Seq<Recipe>> content = new Seq<>();
+
+                for(int i = 0; i < recipes.max(r -> r.row).row + 1; i++) {
+                    final int finalI = i;
+                    content.add(recipes.select(r -> r.row == finalI));
+                }
+
+                final Color invalid = Color.rgb(100, 0, 0);
+                for(var row : content) {
                     cont.table(list -> {
                         list.left();
                         int j = 0;
                         for(var item : row) {
+                            Boolp valid = () -> {
+                                if(state.rules.infiniteResources) return true;
+                                else if(item.isCanCraftedByHand()) return item.canCraft(main.accessor);
+                                else return false;
+                            };
+
                             var s = new Slot();
-                            s.stack.count = 1;
-                            s.stack.item = new SlotItem(item);
+                            s.stack.item = item.getIcon();
                             s.overdrive.stackSize = Float.POSITIVE_INFINITY;
-                            list.add(new SlotImage(s, Color.darkGray, true)).size(48).pad(6);
+                            list.add(new SlotImage(s, () -> {
+                                return valid.get() ? Color.darkGray : invalid;
+                            }, true)).size(48).pad(6).update(ignored -> {
+                                s.stack.count = item.getCraftCount(main.accessor);
+                            }).tooltip(table -> {
+                                table.left();
+                                table.defaults().left();
+                                table.setBackground(Tex.button);
+                                var key = RecipeCatalogue.all.findKey(item, true);
+                                if(key != null) {
+                                    table.add(bundle.get("recipe." + key + ".name")).row();
+                                    table.pane(desc -> {
+                                        desc.left();
+                                        desc.defaults().left();
+                                        desc.add(bundle.get("recipe." + key + ".desc"));
+                                    }).width(400).row();
+                                    table.add("").row();
+                                }
+                                table.add("requirements:").row();
+                                table.table(req -> {
+                                    for(var stack : item.in) {
+                                        var s1 = new Slot();
+                                        s1.stack = stack;
+                                        s1.overdrive.stackSize = Float.POSITIVE_INFINITY;
+                                        req.add(new SlotImage(s1, () -> {
+                                            return main.accessor.amountOf(stack.item) >= stack.count ? Color.darkGray : invalid;
+                                        }, true)).pad(3).size(48);
+                                    }
+                                }).row();
+                                table.add("output:").row();
+                                table.table(out -> {
+                                    for(var stack : item.out) {
+                                        var s1 = new Slot();
+                                        s1.stack = stack;
+                                        s1.overdrive.stackSize = Float.POSITIVE_INFINITY;
+                                        out.add(new SlotImage(s1, () -> Color.darkGray, true)).pad(3).size(48);
+                                    }
+                                }).row();
+                                if(!item.isCanCraftedByHand()) {
+                                    table.add("[red]Can't be crafted by hand!");
+                                }
+                            });
 
                             if(j++ % finalCells == finalCells - 1) {
                                 list.row();
@@ -200,7 +204,7 @@ public class Main extends Window implements ApplicationListener {
     }
 
     public void unfocus() {
-        Core.scene.unfocus(this);
+        scene.unfocus(this);
     }
 
     @Override
@@ -264,7 +268,7 @@ public class Main extends Window implements ApplicationListener {
         }
 
         if(state.post()) {
-            footer.update(() -> Core.scene.unfocus(footer));
+            footer.update(() -> scene.unfocus(footer));
             footer.clicked(this::unfocus);
         }
     }
@@ -305,7 +309,7 @@ public class Main extends Window implements ApplicationListener {
             tmp[0].setScrollingDisabledY(true);
             tmp[0].setOverscroll(false, false);
 
-            Core.app.post(() -> {
+            app.post(() -> {
                 tmp[0].setScrollX(scrollX);
                 tmp[0].updateVisualScroll();
 
@@ -402,7 +406,7 @@ public class Main extends Window implements ApplicationListener {
                 }
             }).grow().get();
 
-            Core.app.post(() -> {
+            app.post(() -> {
                 pane.setScrollPercentY(scrollY);
                 pane.updateVisualScroll();
 
@@ -431,12 +435,12 @@ public class Main extends Window implements ApplicationListener {
     @Override
     public void update() {
         if(picked(null)) {
-            var camera = Core.scene.getViewport().getCamera();
+            var camera = scene.getViewport().getCamera();
             Draw.proj(camera);
 
             Draw.draw(Layer.max, () -> {
                 if(selectedSlot != null && selectedSlot.stack.item != null) {
-                    var pos = camera.unproject(Core.input.mouse());
+                    var pos = camera.unproject(input.mouse());
                     var icon = selectedSlot.stack.item.get().uiIcon;
                     Draw.rect(icon, pos.x, pos.y, icon.width, icon.height);
                     float val = Mathf.floor(selectedSlot.stack.count);
@@ -460,7 +464,6 @@ public class Main extends Window implements ApplicationListener {
     }
 
     public static class CraftingCategory {
-        public Seq<Seq<UnlockableContent>> content = new Seq<>();
         public UnlockableContent icon;
         public String name;
     }

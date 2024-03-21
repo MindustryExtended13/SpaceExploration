@@ -1,5 +1,6 @@
 package se.ui.layout;
 
+import arc.func.Prov;
 import arc.graphics.Color;
 import arc.scene.ui.Image;
 import arc.scene.ui.layout.Stack;
@@ -14,12 +15,16 @@ import se.ui.UIUtil;
 
 public class SlotImage extends Stack {
     public SlotImage(Slot slot, Color color) {
-        this(slot, color, false);
+        this(slot, () -> color, false);
     }
 
-    public SlotImage(Slot slot, Color color, boolean alwaysShowNumber) {
+    public SlotImage(Slot slot, Prov<Color> color, boolean alwaysShowNumber) {
         add(new Table(o -> {
-            o.image().color(color).grow();
+            o.image().grow().update(i -> {
+                if(color.get() != null) {
+                    i.setColor(color.get());
+                }
+            });
         }));
 
         add(new Table(o -> {

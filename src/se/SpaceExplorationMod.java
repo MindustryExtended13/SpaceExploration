@@ -19,6 +19,7 @@ import se.content.HiddenWorkContentLoader;
 import se.content.SeContentLoader;
 import se.content.VanillaMixin;
 import se.event.ContentMixinsSetupEvent;
+import se.prototypes.recipe.RecipeCatalogue;
 import se.prototypes.unit.Types;
 import se.prototypes.unit.UnitsShadows;
 import se.prototypes.unit.shadowiInstances.ShadowXeonUnitType;
@@ -83,7 +84,7 @@ public @se.Mod class SpaceExplorationMod extends Mod {
                 mainWindow.rollUp();
             });
 
-            Main.load();
+            RecipeCatalogue.create();
 
             try {
                 Scripts scripts = mods.getScripts();

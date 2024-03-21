@@ -1,8 +1,10 @@
 package se.util;
 
+import arc.func.Boolf2;
 import arc.func.Cons2;
 import arc.func.Func;
 import arc.func.Prov;
+import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Reflect;
 
@@ -90,5 +92,22 @@ public class Tables {
         }
 
         return instance;
+    }
+
+    public static<K, V> boolean contains(ObjectMap<K, V> map, Boolf2<K, V> boolf2) {
+        return find(map, boolf2) != null;
+    }
+
+    @Contract("null, _ -> null; !null, null -> null")
+    public static<K, V> K find(ObjectMap<K, V> map, Boolf2<K, V> boolf2) {
+        if(map == null || boolf2 == null) return null;
+
+        for(var entry : map) {
+            if(boolf2.get(entry.key, entry.value)) {
+                return entry.key;
+            }
+        }
+
+        return null;
     }
 }
